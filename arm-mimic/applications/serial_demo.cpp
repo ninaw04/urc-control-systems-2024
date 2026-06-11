@@ -73,8 +73,8 @@ void application()
     hal::delay(*clock, 2000ms);
 
     // Map potentiometer value to 180 degrees
-    std::pair servo_output_range = { 0.06,
-                                     0.89 };  // The values from 0 to 180 in ADC
+    std::pair servo_output_range = { 0.183,
+                                     0.711 };  // The values from 0 to 180 in ADC
     std::pair output_percent = { 0, 180 };
     float servo_pos = test_servo_feedback->read();
     float servo_percent_pos =

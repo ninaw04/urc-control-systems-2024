@@ -1,5 +1,6 @@
 #include <libhal-actuator/rc_servo.hpp>
 #include <libhal-exceptions/control.hpp>
+#include <libhal-expander/pca9685.hpp>
 #include <libhal-util/serial.hpp>
 #include <libhal-util/steady_clock.hpp>
 #include <libhal/error.hpp>
@@ -14,27 +15,50 @@ void application()
 
   auto clock = resources::clock();
   auto console = resources::console();
-  auto servo_settings = resources::rc_servo_settings();
-  std::array<hal::actuator::rc_servo16, 4> servos{
-    // shoulder_servo
-    // elbow_servo
-    // pitch_servo
-    // roll_servo
+
+  // Set up PCA9685
+  auto i2c = resources::i2c();
+  auto servo_settings = resources::servo_settings();
+  hal::expander::pca9685 pca9685(*i2c, 0b100'0000);
+  auto pwm0 = pca9685.get_pwm_channel<0>();
+  auto pwm1 = pca9685.get_pwm_channel<1>();
+  auto pwm2 = pca9685.get_pwm_channel<2>();
+  auto pwm3 = pca9685.get_pwm_channel<3>();
+  auto pwm4 = pca9685.get_pwm_channel<4>();
+
+  std::array<hal::actuator::rc_servo, 5> servos{
+    { hal::actuator::rc_servo(pwm0, servo_settings),
+      hal::actuator::rc_servo(pwm1, servo_settings),
+      hal::actuator::rc_servo(pwm2, servo_settings),
+      hal::actuator::rc_servo(pwm3, servo_settings),
+      hal::actuator::rc_servo(pwm4, servo_settings) }
   };
+
+  // Set up ADC1283
+
+  // hal::actuator::rc_servo shoulder_servo(pwm0, servo_settings);
+  // hal::actuator::rc_servo elbow_servo(pwm1, servo_settings);
+  // hal::actuator::rc_servo pitch_servo(pwm2, servo_settings);
+  // hal::actuator::rc_servo roll_servo(pwm3, servo_settings);
+  // hal::actuator::rc_servo clamp_servo(pwm4, servo_settings);
+
+  // std::array<hal::actuator::rc_servo, 5> servos{
+  //   shoulder_servo, elbow_servo, pitch_servo, roll_servo, clamp_servo
+  // };
   // shoulder_servo
   // elbow_servo
   // pitch_servo
   // roll_servo
   // auto motor settings?
-  
-  bool mimic_attached = false;
-  std::pair servo_output_range = { 0.06,
-                                   0.89 };  // The values from 0 to 180 in ADC
+
+  bool controller_mode = false;
+  std::pair servo_output_range = { 0.183,
+                                   0.711 };  // The values from 0 to 180 in ADC
   std::pair output_percent = { 0, 180 };
   float tolerance = 2.0f;  // TESTING degrees
 
   // Set up ADC expander!
-  if (!mimic_attached) {
+  if (controller_mode) {
     // sending arm movements by reading adc
     // for adc channel in adcs
     //
@@ -43,7 +67,7 @@ void application()
   // writing pwm to servos, meaning mimicking arm
   // movements
   std::span<char> mimic_state_buffer{};
-  if (mimic_attached) {
+  if (!controller_mode) {
     // read serial
     size_t index = 0;
     bool started_reading = false;
@@ -75,7 +99,9 @@ void application()
     // separating the buffer into respective portions
     int i = 0;
     for (auto servo : servos) {
-      std::span<char> servo_buffer = mimic_state_buffer.subspan(i * 1, i * 4);
+      // std::span<char> servo_buffer = mimic_state_buffer.subspan(i * 1, i *
+      // 4);
+      std::span<char> servo_buffer = mimic_state_buffer.subspan(i * 1, i * 1);
       float deg_value = std::strtof(servo_buffer.data(), nullptr);
       hal::degrees angle = deg_value;
       // If degree is invalid
@@ -93,12 +119,12 @@ void application()
       }
 
       // Set servo to degree value
-      servo->position(angle);
+      servo.position(angle);
       hal::delay(*clock,
                  2000ms);  // blocking? what is the proper way to approach this
 
       // TESTING use ADC to look at accuracy
-      float servo_pos = servo_feedback[i]->read();  // THIS WILL BE DONE
+      float servo_pos = servo_feedback[i].read();  // THIS WILL BE DONE
       float servo_percent_pos =
         hal::map(servo_pos, servo_output_range, output_percent);
       hal::print<64>(*console, "ADC: %f\n", servo_pos);

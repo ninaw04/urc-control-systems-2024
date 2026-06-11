@@ -1,7 +1,3 @@
-// i2c
-// pwms
-// uart
-
 // Copyright 2024 - 2025 Khalil Estell and the libhal contributors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,6 +28,7 @@
 #include <libhal-arm-mcu/stm32f1/usart.hpp>
 #include <libhal-arm-mcu/system_control.hpp>
 #include <libhal-exceptions/control.hpp>
+#include <libhal-expander/pca9685.hpp>
 #include <libhal-util/atomic_spin_lock.hpp>
 #include <libhal-util/bit_bang_i2c.hpp>
 #include <libhal-util/inert_drivers/inert_adc.hpp>
@@ -180,6 +177,19 @@ hal::actuator::rc_servo16::settings rc_servo_settings()
     .max_microseconds = 2500,
   };
   return rc_servo_settings;
+}
+
+// Placeholder settings for non 16 version
+hal::actuator::rc_servo::settings servo_settings()
+{
+  hal::actuator::rc_servo::settings servo_settings{
+    .frequency = 50,
+    .min_angle = 0,
+    .max_angle = 180,
+    .min_microseconds = 500,
+    .max_microseconds = 2500,
+  };
+  return servo_settings;
 }
 
 hal::v5::optional_ptr<hal::actuator::rc_servo16> rc_servo_ptr;
